@@ -755,7 +755,12 @@ check_loop() {
 }
 
 run_shell() {
-	/bin/ash
+	if [ -n "$DEBUG" ]
+	then
+		/bin/ash
+	else
+		bad_msg "Reboot with 'debug' option to open a shell."
+	fi
 }
 
 fs_type_in_use() {
@@ -791,7 +796,7 @@ test_success() {
 	then
 		error_string=$1
 		error_string="${error_string:-run command}"
-		bad_msg 'Failed to $1; failing back to the shell...'
+		bad_msg 'Failed to $1...'
 		run_shell
 	fi
 }
@@ -857,27 +862,40 @@ prompt_user(){
 	[ -n "${3}" ] && local explnt=" or : ${3}" || local explnt="."
 
 	bad_msg "Could not find the ${2} in ${oldvalue}${explnt}"
-	bad_msg "Please specify another value or:"
-	bad_msg "- press Enter for the same"
-	bad_msg '- type "shell" for a shell'
-	bad_msg '- type "q" to skip...'
-	printf "%s" "${2}(${oldvalue}) :: "
-	read -t 10 ${1}
-	case `eval echo '$'${1}` in
-		'q')
-			eval ${1}'='${oldvalue}
+	if [ -n "$DEBUG" ]
+	then
+		bad_msg "Please specify another value or:"
+		bad_msg "- press Enter for the same"
+		bad_msg '- type "shell" for a shell'
+		bad_msg '- type "q" to skip...'
+		printf "%s" "${2}(${oldvalue}) :: "
+		read -t 10 ${1}
+		case `eval echo '$'${1}` in
+			'q')
+				eval ${1}'='${oldvalue}
+				warn_msg "Skipping step, this will likely cause a boot failure."
+				break
+				;;
+			'shell')
+				eval ${1}'='${oldvalue}
+				warn_msg "To leave and try again just press <Ctrl>+D"
+				run_shell
+				;;
+			'')
+				eval ${1}'='${oldvalue}
+				;;
+		esac
+	else
+		bad_msg 'Please Enter for the same, or "q" to skip'
+		bad_msg 'Alternatively, reboot with "debug" option'
+		bad_msg 'to specify another value or open a shell.'
+		read -t 10
+		if [ "$REPLY" = 'q' ]
+		then
 			warn_msg "Skipping step, this will likely cause a boot failure."
 			break
-			;;
-		'shell')
-			eval ${1}'='${oldvalue}
-			warn_msg "To leave and try again just press <Ctrl>+D"
-			run_shell
-			;;
-		'')
-			eval ${1}'='${oldvalue}
-			;;
-	esac
+		fi
+	fi
 }
 
 cmdline_hwopts() {

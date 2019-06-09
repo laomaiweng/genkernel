@@ -1114,10 +1114,16 @@ fi
 splash 'verbose'
 
 bad_msg "A fatal error has occured since ${init} did not"
-bad_msg "boot correctly. Trying to open a shell..."
+bad_msg "boot correctly."
 
-exec /bin/bash
-exec /bin/sh
-exec /bin/ash
-exec /bin/dash
-exec sh
+if [ -n "$DEBUG" ]
+then
+	bad_msg "Trying to open a shell..."
+	exec /bin/bash
+	exec /bin/sh
+	exec /bin/ash
+	exec /bin/dash
+	exec sh
+else
+	bad_msg 'Reboot with "debug" option to open a shell.'
+fi
